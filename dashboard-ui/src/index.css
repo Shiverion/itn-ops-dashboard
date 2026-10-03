@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/*
+ * ITN brand (from the ITN website): deep red, warm near-black, warm grays.
+ * Data colors follow the dashboard palette rules: progress and "physical"
+ * bars in blue (series 1), "billed" in orange (series 2); both validated for
+ * colorblind separation and contrast in light and dark. Status colors
+ * (good/warning/serious/critical) are reserved for status and always come
+ * with an icon and a text label.
+ */
+:root {
+  color-scheme: light;
+  --page: #f6f4f2;
+  --surface: #ffffff;
+  --surface-2: #faf8f6;
+  --ink: #1f1814;
+  --ink-2: #57504b;
+  --muted: #847b75;
+  --line: #e7e2dd;
+  --chip: #f1edea;
+  --brand: #8b232b;
+  --header: #1f1814;
+  --header-ink: #f6f4f2;
+  --header-muted: #b3a9a2;
+  --series-1: #2a78d6;
+  --series-1-track: #dce8f8;
+  --series-2: #eb6834;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0f0d0c;
+    --surface: #1a1a19;
+    --surface-2: #211f1d;
+    --ink: #f6f4f2;
+    --ink-2: #c9c1ba;
+    --muted: #958c86;
+    --line: #2f2b28;
+    --chip: #2a2623;
+    --brand: #b23a44;
+    --header: #141110;
+    --header-ink: #f6f4f2;
+    --header-muted: #a39a93;
+    --series-1: #3987e5;
+    --series-1-track: #1e3049;
+    --series-2: #d95926;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0f0d0c;
+  --surface: #1a1a19;
+  --surface-2: #211f1d;
+  --ink: #f6f4f2;
+  --ink-2: #c9c1ba;
+  --muted: #958c86;
+  --line: #2f2b28;
+  --chip: #2a2623;
+  --brand: #b23a44;
+  --header: #141110;
+  --header-ink: #f6f4f2;
+  --header-muted: #a39a93;
+  --series-1: #3987e5;
+  --series-1-track: #1e3049;
+  --series-2: #d95926;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-chip: var(--chip);
+  --color-brand: var(--brand);
+  --color-header: var(--header);
+  --color-header-ink: var(--header-ink);
+  --color-header-muted: var(--header-muted);
+  --color-series-1: var(--series-1);
+  --color-series-1-track: var(--series-1-track);
+  --color-series-2: var(--series-2);
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+  --font-sans: "Fira Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Barlow", "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

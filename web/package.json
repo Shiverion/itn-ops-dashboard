@@ -1,0 +1,21 @@
+{
+  "name": "itn-ops-web",
+  "private": true,
+  "type": "module",
+  "description": "Serves the ITN Ops dashboard at ops.itnconstruction.com (Cloud Run): Google sign-in, sheets read as the signed-in viewer, Refresh button forwarded to itn-refresh.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "exceljs": "4.4.0",
+    "google-auth-library": "11.1.0",
+    "mammoth": "1.13.0"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}

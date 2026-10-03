@@ -1,0 +1,8 @@
+# gcloud builds submit --config web/cloudbuild.yaml --substitutions _TAG=vN --region asia-southeast2 .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "web/Dockerfile", "-t", "asia-southeast2-docker.pkg.dev/$PROJECT_ID/itn/dashboard:${_TAG}", "."]
+images:
+  - asia-southeast2-docker.pkg.dev/$PROJECT_ID/itn/dashboard:${_TAG}
+substitutions:
+  _TAG: v1
