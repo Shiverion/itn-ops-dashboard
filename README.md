@@ -6,13 +6,9 @@ Built and deployed in two days. Read the full story in **[CASE-STUDY.md](CASE-ST
 
 > This repository contains the **dashboard (frontend) and its server (backend)**. The knowledge pipeline, the Apps Script admin project and all deployment configuration live in a private repository. Everything shown in the local preview is **fictional sample data**.
 
-![Overview: tax alert, revenue and operations at a glance](docs/screenshots/overview.jpg)
+![Synthetic overview mockup](docs/screenshots/overview-synthetic-demo.png)
 
-| Project page: activity log + AI advisor | Taxes: deadlines and alerts |
-|---|---|
-| ![Project page](docs/screenshots/project-log-advisor.jpg) | ![Taxes](docs/screenshots/taxes.jpg) |
-
-<sub>Screenshots from the local preview with fictional data.</sub>
+<sub>Illustrative portfolio mockup using the fictional NusaWorks Demo brand and synthetic values. The local preview also uses sample data; no production records are included in this image.</sub>
 
 ---
 
