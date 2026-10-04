@@ -6,9 +6,23 @@ Built and deployed in two days. Read the full story in **[CASE-STUDY.md](CASE-ST
 
 > This repository contains the **dashboard (frontend) and its server (backend)**. The knowledge pipeline, the Apps Script admin project and all deployment configuration live in a private repository. Everything shown in the local preview is **fictional sample data**.
 
-![Synthetic overview mockup](docs/screenshots/overview-synthetic-demo.png)
+The eight portfolio captures below preserve the dashboard’s original screens and use invented demo records, amounts, and dates. The local preview also uses fictional sample data; no production records are shown.
 
-<sub>Illustrative portfolio mockup using the fictional NusaWorks Demo brand and synthetic values. The local preview also uses sample data; no production records are included in this image.</sub>
+| Overview | Ask ITN |
+|---|---|
+| ![Overview with synthetic data](docs/screenshots/overview-synthetic.png) | ![Ask ITN with synthetic data](docs/screenshots/ask-itn-synthetic.png) |
+
+| Revenue | Projects |
+|---|---|
+| ![Revenue with synthetic data](docs/screenshots/revenue-synthetic.png) | ![Projects with synthetic data](docs/screenshots/projects-synthetic.png) |
+
+| Tenders | Certificates |
+|---|---|
+| ![Tenders with synthetic data](docs/screenshots/tenders-synthetic.png) | ![Certificates with synthetic data](docs/screenshots/certificates-synthetic.png) |
+
+| Taxes | Contracts |
+|---|---|
+| ![Taxes with synthetic data](docs/screenshots/taxes-synthetic.png) | ![Contracts with synthetic data](docs/screenshots/contracts-synthetic.png) |
 
 ---
 
