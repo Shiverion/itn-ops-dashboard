@@ -1,4 +1,6 @@
 import { clearToken, idToken, type Gsi } from './auth';
+import { demoAsk, demoDraft, demoUpload, demoUser } from './demo/session';
+import { demoDelete, demoDeleteLog, demoEdit, demoLogEntry, demoPayload } from './demo/store';
 import type { DashboardData } from './types';
 
 interface ScriptRun {
@@ -31,7 +33,11 @@ export class SignInRequired extends Error {}
  * - "web": ops.itnconstruction.com (web/server.mjs), signed in with Google.
  * - "mock": `npm run dev`, with sample data (dropped from the production build).
  */
-export function runtime(): 'apps-script' | 'web' | 'mock' {
+/** True only in `--mode demo` builds; a constant, so other builds drop the demo code entirely. */
+export const DEMO = import.meta.env.VITE_DEMO === '1';
+
+export function runtime(): 'apps-script' | 'web' | 'mock' | 'demo' {
+  if (DEMO) return 'demo';
   if (window.google?.script?.run) return 'apps-script';
   return import.meta.env.DEV ? 'mock' : 'web';
 }
@@ -63,7 +69,19 @@ export function canEdit(): boolean {
   return runtime() !== 'apps-script';
 }
 
+/** The demo (fictional data in this browser): the same requests, answered by demo/store.ts. */
+function demoSave(path: string, body: Record<string, unknown>): SaveReply {
+  if (path === '/api/edit') return demoEdit(String(body.kind), (body.id as string) ?? null, (body.fields as Record<string, string>) ?? {});
+  if (path === '/api/log') return demoLogEntry(String(body.projectCode), (body.entry as Record<string, string>) ?? {}, (body.attachments as Attachment[]) ?? []);
+  if (body.kind === 'log') return demoDeleteLog(String(body.projectCode), body.row as number | undefined, String(body.timestamp));
+  return demoDelete(String(body.kind), String(body.id));
+}
+
 async function save(path: string, body: unknown): Promise<SaveReply> {
+  if (DEMO) {
+    await new Promise((r) => setTimeout(r, 250));
+    return demoSave(path, body as Record<string, unknown>);
+  }
   if (runtime() === 'mock') {
     await new Promise((r) => setTimeout(r, 400));
     return { ok: true, message: 'Saved (preview only, nothing was written).' };
@@ -130,6 +148,7 @@ export async function uploadFile(file: File, target: { project: string } | { cer
   const type = file.type || EXT_TYPES[file.name.split('.').pop()?.toLowerCase() ?? ''] || '';
   if (!type || !Object.values(EXT_TYPES).includes(type)) throw new Error(`${file.name}: this kind of file can’t be uploaded.`);
   if (file.size > MAX_FILE_MB * 1024 * 1024) throw new Error(`${file.name} is larger than ${MAX_FILE_MB} MB.`);
+  if (DEMO) return demoUpload(file);
   if (runtime() === 'mock') {
     await new Promise((r) => setTimeout(r, 600));
     return { id: `mock-${file.name}`, name: file.name, mimeType: type, url: 'https://drive.google.com/file/d/mockfile123456/view' };
@@ -170,6 +189,7 @@ async function aiCall<T>(path: string, body: unknown, mock: T): Promise<T> {
 
 /** AI reads uploaded files and drafts a log entry (kind "log") or certificate fields (kind "certificate"). */
 export function draftFromFiles(kind: 'log' | 'certificate', fileIds: string[], projectCode?: string): Promise<{ draft: Record<string, string> }> {
+  if (DEMO) return demoDraft(kind, fileIds).then((draft) => ({ draft }));
   const mock: Record<string, string> =
     kind === 'log'
       ? { Type: 'Meeting', Title: '2nd meeting – price negotiation', Summary: 'Client asked for a 5% discount on RFQ 012. ITN to send a revised quotation.', Issues: 'Margin below target if the full 5% is given.', Date: new Date().toISOString().slice(0, 10), NextMilestone: 'Send revised quotation', NextMilestoneDate: '' }
@@ -188,6 +208,7 @@ export interface ChatMessage {
  * resolves with the full answer.
  */
 export async function askAdvisor(question: string, history: ChatMessage[], projectCode: string | undefined, onDelta: (text: string) => void): Promise<string> {
+  if (DEMO) return demoAsk(question, history, projectCode, lastDemoData ?? (await loadDashboard()), onDelta);
   if (runtime() === 'mock') {
     const answer =
       '**Preview answer.** Based on the 2nd meeting entry:\n\n- Send the revised quotation with a 3% discount and a shorter payment term.\n- Ask the client to confirm the award date in writing.\n- Book the site survey for next week.';
@@ -249,6 +270,13 @@ export function deleteLogEntry(projectCode: string, entry: { row?: number; times
 /** Calls a server function that returns a RefreshReply (the "Refresh knowledge" button). */
 export function callRefresh(name: 'requestRefresh' | 'getRefreshStatus'): Promise<RefreshReply> {
   const mode = runtime();
+  if (DEMO) {
+    return Promise.resolve(
+      name === 'requestRefresh'
+        ? { ok: true, message: 'Demo: in the real dashboard this pulls new emails and files into Ask ITN.' }
+        : { ok: true, running: false, last: { finished: new Date(Date.now() - 2 * 3600_000).toISOString(), result: 'updated' } },
+    );
+  }
   if (mode === 'web') {
     return webApi<RefreshReply>(name === 'requestRefresh' ? 'POST' : 'GET', name === 'requestRefresh' ? '/api/refresh' : '/api/status').catch(
       (error: Error) => ({ ok: false, message: error.message }),
@@ -275,8 +303,16 @@ export function callRefresh(name: 'requestRefresh' | 'getRefreshStatus'): Promis
  * inside Apps Script, from /api/dashboard on the web version, or sample data in
  * `npm run dev` (that branch and the sample data are dropped from the build).
  */
+let lastDemoData: DashboardData | null = null;
+
 export function loadDashboard(): Promise<DashboardData> {
   const mode = runtime();
+  if (DEMO) {
+    const user = demoUser();
+    if (!user) return Promise.reject(new SignInRequired('Please sign in.'));
+    lastDemoData = demoPayload(user);
+    return Promise.resolve(lastDemoData);
+  }
   if (mode === 'web') return webApi<DashboardData>('GET', '/api/dashboard');
   const run = window.google?.script?.run;
   if (mode === 'apps-script' && run) {

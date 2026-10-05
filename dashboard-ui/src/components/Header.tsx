@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { callRefresh, runtime, type RefreshReply } from '../api';
+import { callRefresh, DEMO, runtime, type RefreshReply } from '../api';
 import logo from '../assets/itn-logo.jpg';
 import { signOut } from '../auth';
+import { demoLogout } from '../demo/session';
 import type { DashboardData, SheetLink } from '../types';
 
 function SheetButton({ link, label }: { link: SheetLink | null; label: string }) {
@@ -94,11 +95,12 @@ export function Header({ data, onSignedOut }: { data: DashboardData | null; onSi
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-header-muted">
             <span>Updated {data.generatedAt} WIB</span>
             {data.viewerEmail && <span className="hidden sm:inline">{data.viewerEmail}</span>}
-            {runtime() === 'web' && (
+            {(runtime() === 'web' || DEMO) && (
               <button
                 type="button"
                 onClick={() => {
-                  signOut();
+                  if (DEMO) demoLogout();
+                  else signOut();
                   onSignedOut();
                 }}
                 className="text-header-muted underline-offset-2 hover:text-header-ink hover:underline"

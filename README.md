@@ -73,6 +73,9 @@ React 19 · TypeScript 5.9 · Tailwind CSS 4 · Vite 8 (single-file build) · No
 
 ```
 dashboard-ui/        React + TypeScript app (Vite, Tailwind); builds to one self-contained HTML file
+  src/demo/          Demo mode: fictional seed data, in-browser store (shared rules), demo login + AI client
+api/                 Vercel functions for the demo: login (session token) and ask (Kimi, streamed)
+vercel.json          Demo build, output folder, security headers
   src/components/    Pages and panels: revenue, invoices, taxes, projects (+ activity log), tenders,
                      certificates, contracts, advisor, edit dialog, sign-in
   src/mock.ts        Fictional sample data for the local preview
@@ -86,6 +89,30 @@ web/
 shared/Logic.js      Pure business logic: payload builder, tax rules, revenue, edit/delete planner
 dashboard/src/Config.js  Sheet schemas and option lists
 ```
+
+## Stakeholder demo (Vercel)
+
+A self-contained demo of the same dashboard runs on **Vercel** with a **fictional company**:
+
+- **No database.** The demo data (6 projects with activity logs, ~two years of invoices, taxes in every state, tenders, certificates, contracts) is generated in the browser relative to today, so deadlines and alerts always look current.
+- **Same business rules as production.** Edits, deletions and log entries go through the real `planEdit` / `planDelete` / `validateLogEntry` in `shared/Logic.js`, and the screens are built by the real `buildDashboardPayload`. Each visitor's changes stay in their own browser; **Reset demo data** starts over.
+- **Demo login.** A username and password checked by `api/login` (stored as Vercel environment variables, never in this repository), which issues a signed 12-hour session token.
+- **AI advisor on the Kimi API** (`api/ask`, Moonshot's OpenAI-compatible endpoint), streamed back in the same NDJSON format as production. The API key stays on the server; answers are capped in length and per session per hour. Uploads and "draft from files" are simulated in the demo, so no real document is ever sent to an AI.
+
+### Deploy it
+
+1. Import this repository in Vercel (no framework preset). `vercel.json` sets the build (`npm --prefix dashboard-ui run build:demo`), the output folder and the security headers; `api/` becomes the two functions.
+2. Add these environment variables in **Vercel → Project → Settings → Environment Variables**:
+
+| Variable | Value |
+|---|---|
+| `KIMI_API_KEY` | Your Moonshot API key |
+| `DEMO_USERNAME`, `DEMO_PASSWORD` | The login you give stakeholders |
+| `DEMO_SESSION_SECRET` | A random string of 32+ characters (e.g. `openssl rand -hex 32`) |
+| `KIMI_MODEL` *(optional)* | Defaults to `moonshot-v1-32k` (fast, no thinking step) |
+| `KIMI_MAX_TOKENS`, `DEMO_QUESTIONS_PER_HOUR` *(optional)* | Default 900 and 40 |
+
+3. Redeploy. Run the demo locally with `npm --prefix dashboard-ui run dev:demo` (any login works locally; AI answers are placeholders without Vercel).
 
 ## Run the preview locally
 
@@ -103,7 +130,7 @@ Open http://localhost:5173. Useful pages: `#/overview`, `#/revenue`, `#/projects
 cd web && npm install && npm test
 ```
 
-The business-logic suite (83 tests) lives with the shared module in the private repository; the server suite here checks sign-in rules, the security headers, routing and how files are handed to the AI.
+The business-logic suite (83 tests) lives with the shared module in the private repository; the suite here (9 tests) checks sign-in rules, the security headers, routing, how files are handed to the AI, and the demo's login and streamed Kimi answers against a fake API.
 
 ## Deploying (outline)
 

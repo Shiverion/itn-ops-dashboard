@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { canEdit, loadDashboard, SignInRequired } from './api';
+import { canEdit, DEMO, loadDashboard, SignInRequired } from './api';
+import { DemoBanner, DemoSignIn } from './demo/DemoSignIn';
 import { Advisor } from './components/Advisor';
 import { CertificatesPanel } from './components/CertificatesPanel';
 import { ContractsPanel } from './components/ContractsPanel';
@@ -205,7 +206,11 @@ export function App() {
         <Header data={data} onSignedOut={() => setState({ status: 'signin', reason: 'Signed out.' })} />
         <main className="mx-auto max-w-[1400px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
           {state.status === 'signin' ? (
-            <SignIn onSignedIn={() => load()} reason={state.reason} />
+            DEMO ? (
+              <DemoSignIn onSignedIn={() => load()} />
+            ) : (
+              <SignIn onSignedIn={() => load()} reason={state.reason} />
+            )
           ) : state.status === 'error' ? (
             <div role="alert" className="rounded-xl border border-critical/40 bg-surface p-5">
               <p className="font-medium text-ink">The dashboard couldn’t load its data.</p>
@@ -214,6 +219,7 @@ export function App() {
             </div>
           ) : (
             <>
+              {DEMO && <DemoBanner onReset={() => load(true)} />}
               <Tabs view={route.view} data={data} />
               {data ? (
                 <Page route={route} data={data} onSaved={onSaved} />
@@ -227,7 +233,9 @@ export function App() {
           )}
         </main>
         <footer className="mx-auto max-w-[1400px] px-4 pb-8 text-xs text-muted sm:px-6 lg:px-8">
-          {canEdit()
+          {DEMO
+            ? 'Demo with a fictional company: changes are kept in this browser only. The real dashboard saves them to the company’s Google Sheets, with an audit log.'
+            : canEdit()
             ? 'Changes made here are saved straight to the Operations and Finance sheets, as you, and recorded in their AuditLog.'
             : 'Read-only view. To change anything, edit the Operations sheet or submit the weekly update form.'}
         </footer>
