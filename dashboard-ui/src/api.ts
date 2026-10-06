@@ -33,8 +33,8 @@ export class SignInRequired extends Error {}
  * - "web": ops.itnconstruction.com (web/server.mjs), signed in with Google.
  * - "mock": `npm run dev`, with sample data (dropped from the production build).
  */
-/** True only in `--mode demo` builds; a constant, so other builds drop the demo code entirely. */
-export const DEMO = import.meta.env.VITE_DEMO === '1';
+/** True only in `--mode demo` builds (set by the build command, so it can't go missing); a constant, so other builds drop the demo code entirely. */
+export const DEMO = import.meta.env.MODE === 'demo';
 
 export function runtime(): 'apps-script' | 'web' | 'mock' | 'demo' {
   if (DEMO) return 'demo';
