@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 
-// A tiny Markdown subset for AI answers: paragraphs, "-"/"*"/"1." lists,
-// **bold**, *italic* and `code`. Rendered as React elements, never as HTML,
-// so nothing in an answer can inject markup or scripts.
+// A small Markdown subset for AI answers: paragraphs, headings, "-"/"*"/"1."
+// lists, tables, "---" dividers, **bold**, *italic* and `code`. Rendered as
+// React elements, never as HTML, so nothing in an answer can inject markup or
+// scripts.
 
 function inline(text: string, key: string): ReactNode[] {
   const out: ReactNode[] = [];
@@ -22,9 +23,13 @@ function inline(text: string, key: string): ReactNode[] {
   return out;
 }
 
+const isTableRow = (line: string) => line.startsWith('|') && line.endsWith('|') && line.length > 1;
+const isTableRule = (line: string) => /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/.test(line);
+const cells = (line: string) => line.replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+
 export function Markdown({ text }: { text: string }) {
   const blocks: ReactNode[] = [];
-  const lines = text.replace(/\r/g, '').split('\n');
+  const lines = text.replace(/\r/g, '').split('\n').map((l) => l.trim());
   let list: { ordered: boolean; items: string[] } | null = null;
   let para: string[] = [];
   const flushPara = () => {
@@ -47,14 +52,58 @@ export function Markdown({ text }: { text: string }) {
     );
     list = null;
   };
-  for (const raw of lines) {
-    const line = raw.trim();
+  const flush = () => {
+    flushPara();
+    flushList();
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // A table: a "| a | b |" header row followed by a "|---|---|" rule.
+    if (isTableRow(line) && i + 1 < lines.length && isTableRule(lines[i + 1])) {
+      flush();
+      const head = cells(line);
+      const rows: string[][] = [];
+      i += 2;
+      while (i < lines.length && isTableRow(lines[i])) rows.push(cells(lines[i++]));
+      i -= 1;
+      const k = blocks.length;
+      blocks.push(
+        <div key={`t${k}`} className="overflow-x-auto rounded-md border border-line">
+          <table className="w-full border-collapse text-left text-[13px]">
+            <thead className="bg-chip">
+              <tr>
+                {head.map((h, j) => (
+                  <th key={j} className="px-2.5 py-1.5 font-semibold text-ink">
+                    {inline(h, `t${k}h${j}`)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, ri) => (
+                <tr key={ri} className="border-t border-line align-top">
+                  {head.map((_, j) => (
+                    <td key={j} className="px-2.5 py-1.5 text-ink-2">
+                      {inline(r[j] ?? '', `t${k}r${ri}c${j}`)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
+      continue;
+    }
     const bullet = /^[-*•]\s+(.*)$/.exec(line);
     const numbered = /^\d+[.)]\s+(.*)$/.exec(line);
     const heading = /^#{1,4}\s+(.*)$/.exec(line);
     if (!line) {
-      flushPara();
-      flushList();
+      flush();
+    } else if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) {
+      flush();
+      blocks.push(<hr key={`r${blocks.length}`} className="border-line" />);
     } else if (bullet || numbered) {
       flushPara();
       const ordered = !!numbered;
@@ -62,15 +111,13 @@ export function Markdown({ text }: { text: string }) {
       list ??= { ordered, items: [] };
       list.items.push((bullet ?? numbered)![1]);
     } else if (heading) {
-      flushPara();
-      flushList();
+      flush();
       blocks.push(<p key={`h${blocks.length}`} className="font-semibold text-ink">{inline(heading[1], `h${blocks.length}`)}</p>);
     } else {
       flushList();
       para.push(line);
     }
   }
-  flushPara();
-  flushList();
+  flush();
   return <div className="space-y-2 text-sm leading-relaxed text-ink">{blocks}</div>;
 }

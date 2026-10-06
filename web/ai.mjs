@@ -214,7 +214,7 @@ export async function ask({ question, history, scope, data, notes, files, today,
     'finance (contracts, invoices, taxes) and the Ask ITN knowledge notes built from the company mailbox and Drive. ' +
     'Be concrete and practical: when asked for a next move, give 2-4 specific actions with who/when if the data supports it, and say what each is based on ' +
     '(e.g. "per the 2nd meeting entry on 2 Oct"). If the data does not answer the question, say so and say what information is missing. ' +
-    'Reply in the language of the question. Use short paragraphs or bullet lists (Markdown: **bold**, lists; no tables, no HTML). ' +
+    'Reply in the language of the question. Use short paragraphs or bullet lists (Markdown: **bold**, lists, and a small table only when comparing several items; no HTML). ' +
     `Today is ${today}. ` + DATA_RULE;
   const content = [
     { type: 'text', text: `Scope of the question: ${scope}\n\nDashboard records (JSON):\n${JSON.stringify(data)}` },
