@@ -13,6 +13,11 @@ Object.assign(process.env, {
 // Fake Moonshot endpoint: streams two chunks in the OpenAI SSE format.
 const seen = [];
 const kimi = http.createServer((req, res) => {
+  if (req.method === 'GET' && req.url.endsWith('/models')) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ data: [{ id: 'kimi-k3' }, { id: 'kimi-k2.5' }, { id: 'kimi-k2.6' }] }));
+    return;
+  }
   let body = '';
   req.on('data', (d) => (body += d));
   req.on('end', () => {
@@ -70,6 +75,8 @@ test('ask: streams Kimi’s answer back as NDJSON, with the key only on the serv
   const sent = seen.at(-1);
   assert.equal(sent.auth, 'Bearer test-key');
   assert.equal(sent.body.stream, true);
+  assert.equal(sent.body.model, 'kimi-k2.5'); // first preferred model the key has
+  assert.equal(sent.body.max_tokens, 4000); // room for the thinking step
   assert.match(sent.body.messages[1].content, /P-2026-004/);
   kimi.close();
 });

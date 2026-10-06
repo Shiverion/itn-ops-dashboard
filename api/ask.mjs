@@ -6,8 +6,9 @@
 import { json, readBody, verifyToken } from './_session.mjs';
 
 const BASE = (process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1').replace(/\/$/, '');
-const MODEL = process.env.KIMI_MODEL || 'moonshot-v1-32k';
-const MAX_TOKENS = Number(process.env.KIMI_MAX_TOKENS || 900);
+// Fastest/cheapest first. KIMI_MODEL (if set) wins; otherwise the first of these the key can use.
+const PREFERRED = ['moonshot-v1-32k', 'moonshot-v1-auto', 'moonshot-v1-128k', 'kimi-k2.5', 'kimi-k2.6', 'kimi-k2.7-code-highspeed', 'kimi-k3'];
+const isThinking = (model) => /^kimi-k/.test(model); // K2.x/K3 reason before answering; that counts toward max_tokens
 const PER_HOUR = Number(process.env.DEMO_QUESTIONS_PER_HOUR || 40);
 const MAX_CONTEXT_CHARS = 60_000;
 
@@ -20,6 +21,24 @@ function allowed(user) {
   usage.set(key, n);
   if (usage.size > 5000) usage.clear();
   return n <= PER_HOUR;
+}
+
+let chosenModel = null;
+
+/** The model to use: KIMI_MODEL, else the first preferred model this key can use (asks Moonshot once per instance). */
+async function pickModel() {
+  if (chosenModel) return chosenModel;
+  const wanted = process.env.KIMI_MODEL ? [process.env.KIMI_MODEL, ...PREFERRED] : PREFERRED;
+  let ids = [];
+  try {
+    const res = await fetch(`${BASE}/models`, { headers: { Authorization: `Bearer ${process.env.KIMI_API_KEY}` } });
+    if (res.ok) ids = ((await res.json()).data || []).map((m) => m.id);
+  } catch {
+    /* fall back to the first preference */
+  }
+  chosenModel = (ids.length ? wanted.find((m) => ids.includes(m)) || ids.find((id) => /^(kimi|moonshot)/.test(id)) : null) || wanted[0];
+  console.log(`kimi models available: ${ids.join(', ') || '(list failed)'}; using ${chosenModel}`);
+  return chosenModel;
 }
 
 const SYSTEM =
@@ -52,14 +71,16 @@ export default async function handler(req, res) {
   }));
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Jakarta' }).format(new Date());
 
+  const model = await pickModel();
+  const maxTokens = Number(process.env.KIMI_MAX_TOKENS || (isThinking(model) ? 4000 : 900));
   const upstream = await fetch(`${BASE}/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.KIMI_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       stream: true,
-      temperature: 0.3,
-      max_tokens: MAX_TOKENS,
+      ...(isThinking(model) ? {} : { temperature: 0.3 }),
+      max_tokens: maxTokens,
       messages: [
         { role: 'system', content: `${SYSTEM} Today is ${today}.` },
         { role: 'user', content: `Scope: ${String(body.scope || 'the whole business').slice(0, 80)}\n\nRecords (JSON):\n${context}` },
@@ -72,7 +93,8 @@ export default async function handler(req, res) {
 
   if (!upstream.ok || !upstream.body) {
     const detail = await upstream.text().catch(() => '');
-    console.error('kimi', upstream.status, detail.slice(0, 300));
+    console.error('kimi', model, upstream.status, detail.slice(0, 300));
+    if (upstream.status === 404) chosenModel = null; // pick again next time (e.g. KIMI_MODEL changed)
     // Show Moonshot's own reason (never the key): it tells the presenter whether it's credit, the model or the key.
     let reason = '';
     try {

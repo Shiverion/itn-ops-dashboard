@@ -109,8 +109,8 @@ A self-contained demo of the same dashboard runs on **Vercel** with a **fictiona
 | `KIMI_API_KEY` | Your Moonshot API key |
 | `DEMO_USERNAME`, `DEMO_PASSWORD` | The login you give stakeholders |
 | `DEMO_SESSION_SECRET` | A random string of 32+ characters (e.g. `openssl rand -hex 32`) |
-| `KIMI_MODEL` *(optional)* | Defaults to `moonshot-v1-32k` (fast, no thinking step) |
-| `KIMI_MAX_TOKENS`, `DEMO_QUESTIONS_PER_HOUR` *(optional)* | Default 900 and 40 |
+| `KIMI_MODEL` *(optional)* | Pin a model; otherwise the demo asks Moonshot which models the key has and uses the first of `moonshot-v1-32k`, `moonshot-v1-auto`, `kimi-k2.5`, `kimi-k2.6`, … |
+| `KIMI_MAX_TOKENS`, `DEMO_QUESTIONS_PER_HOUR` *(optional)* | Default 900 (4000 for thinking models) and 40 |
 
 3. Redeploy. Run the demo locally with `npm --prefix dashboard-ui run dev:demo` (any login works locally; AI answers are placeholders without Vercel).
 
