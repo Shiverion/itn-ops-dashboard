@@ -110,7 +110,8 @@ A self-contained demo of the same dashboard runs on **Vercel** with a **fictiona
 | `DEMO_USERNAME`, `DEMO_PASSWORD` | The login you give stakeholders |
 | `DEMO_SESSION_SECRET` | A random string of 32+ characters (e.g. `openssl rand -hex 32`) |
 | `KIMI_MODEL` *(optional)* | Pin a model; otherwise the demo asks Moonshot which models the key has and uses the first of `moonshot-v1-32k`, `moonshot-v1-auto`, `kimi-k2.5`, `kimi-k2.6`, … |
-| `KIMI_MAX_TOKENS`, `DEMO_QUESTIONS_PER_HOUR` *(optional)* | Default 900 (4000 for thinking models) and 40 |
+| `KIMI_THINKING` *(optional)* | Kimi K2.5/K2.6 answer without the reasoning step by default (much faster); set `enabled` to turn it back on |
+| `KIMI_MAX_TOKENS`, `DEMO_QUESTIONS_PER_HOUR` *(optional)* | Default 900 (4000 when the model thinks) and 40 |
 
 3. Redeploy. Run the demo locally with `npm --prefix dashboard-ui run dev:demo` (any login works locally; AI answers are placeholders without Vercel).
 

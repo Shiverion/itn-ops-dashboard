@@ -76,7 +76,9 @@ test('ask: streams Kimi’s answer back as NDJSON, with the key only on the serv
   assert.equal(sent.auth, 'Bearer test-key');
   assert.equal(sent.body.stream, true);
   assert.equal(sent.body.model, 'kimi-k2.5'); // first preferred model the key has
-  assert.equal(sent.body.max_tokens, 4000); // room for the thinking step
+  assert.deepEqual(sent.body.thinking, { type: 'disabled' }); // instant answers for the demo
+  assert.equal(sent.body.max_tokens, 900);
+  assert.equal(sent.body.temperature, undefined);
   assert.match(sent.body.messages[1].content, /P-2026-004/);
   kimi.close();
 });

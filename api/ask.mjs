@@ -9,6 +9,9 @@ const BASE = (process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1').replace
 // Fastest/cheapest first. KIMI_MODEL (if set) wins; otherwise the first of these the key can use.
 const PREFERRED = ['moonshot-v1-32k', 'moonshot-v1-auto', 'moonshot-v1-128k', 'kimi-k2.5', 'kimi-k2.6', 'kimi-k2.7-code-highspeed', 'kimi-k3'];
 const isThinking = (model) => /^kimi-k/.test(model); // K2.x/K3 reason before answering; that counts toward max_tokens
+// K2.5/K2.6 can skip the reasoning step ("instant" answers), which makes the demo much faster.
+// Set KIMI_THINKING=enabled in Vercel to keep it on.
+const canSkipThinking = (model) => /^kimi-k2\.[56]$/.test(model);
 const PER_HOUR = Number(process.env.DEMO_QUESTIONS_PER_HOUR || 40);
 const MAX_CONTEXT_CHARS = 60_000;
 
@@ -72,14 +75,17 @@ export default async function handler(req, res) {
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Jakarta' }).format(new Date());
 
   const model = await pickModel();
-  const maxTokens = Number(process.env.KIMI_MAX_TOKENS || (isThinking(model) ? 4000 : 900));
+  const thinkingOff = canSkipThinking(model) && process.env.KIMI_THINKING !== 'enabled';
+  const thinks = isThinking(model) && !thinkingOff;
+  const maxTokens = Number(process.env.KIMI_MAX_TOKENS || (thinks ? 4000 : 900));
   const upstream = await fetch(`${BASE}/chat/completions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.KIMI_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model,
       stream: true,
-      ...(isThinking(model) ? {} : { temperature: 0.3 }),
+      ...(thinkingOff ? { thinking: { type: 'disabled' } } : {}),
+      ...(isThinking(model) ? {} : { temperature: 0.3 }), // Kimi K models use their own fixed temperature
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: `${SYSTEM} Today is ${today}.` },
