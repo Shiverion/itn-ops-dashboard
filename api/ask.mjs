@@ -73,7 +73,17 @@ export default async function handler(req, res) {
   if (!upstream.ok || !upstream.body) {
     const detail = await upstream.text().catch(() => '');
     console.error('kimi', upstream.status, detail.slice(0, 300));
-    const message = upstream.status === 429 || /balance|quota|suspend/i.test(detail) ? 'The demo AI is out of credit or busy; try again later.' : 'The demo AI could not answer this time.';
+    // Show Moonshot's own reason (never the key): it tells the presenter whether it's credit, the model or the key.
+    let reason = '';
+    try {
+      reason = String(JSON.parse(detail).error?.message || '');
+    } catch {
+      reason = detail;
+    }
+    reason = reason.replace(/sk-[A-Za-z0-9]+/g, '[key]').slice(0, 160);
+    const message = upstream.status === 429 || /balance|quota|suspend/i.test(detail)
+      ? `The demo AI is out of credit or busy; try again later. (Kimi ${upstream.status}${reason ? `: ${reason}` : ''})`
+      : `The demo AI could not answer this time. (Kimi ${upstream.status}${reason ? `: ${reason}` : ''})`;
     return json(res, 502, { ok: false, message });
   }
 
