@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { deleteRecord, saveEdit } from '../api';
-import { fmtDate, relDays } from '../format';
+import { fmtDate, plural, relDays } from '../format';
 import { opts, tenderFields } from '../forms';
 import { splitTenders, tenderTone } from '../summary';
-import type { Options, Tender } from '../types';
+import type { Options, ProjectEmail, Tender } from '../types';
 import { AddButton, RowAction, fromRaw, useEdit } from './edit';
 import { EmptyState, PagerControls, Panel, Pill, SafeLink, StatusChip, usePager } from './ui';
 
@@ -13,7 +13,7 @@ const STRIPE: Record<string, string> = {
   neutral: 'border-line',
 };
 
-function TenderRow({ tender, options, codes }: { tender: Tender; options: Options; codes: string[] }) {
+function TenderRow({ tender, options, codes, emailCount }: { tender: Tender; options: Options; codes: string[]; emailCount: number }) {
   const edit = useEdit();
   const stage = tender.nextStage;
   const tone = stage ? tenderTone(stage.daysLeft) : 'neutral';
@@ -31,7 +31,13 @@ function TenderRow({ tender, options, codes }: { tender: Tender; options: Option
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="line-clamp-2 text-sm leading-snug font-medium text-ink" title={tender.title}>{tender.title || tender.tenderId}</p>
+          <a
+            href={`#/tenders/${encodeURIComponent(tender.tenderId)}`}
+            className="line-clamp-2 text-sm leading-snug font-medium text-ink hover:underline hover:decoration-line hover:underline-offset-4"
+            title={tender.title}
+          >
+            {tender.title || tender.tenderId}
+          </a>
           <Pill>{tender.status || 'No status'}</Pill>
         </div>
         <p className="mt-0.5 truncate text-xs text-muted">{[tender.tenderId, tender.buyer].filter(Boolean).join(' · ')}</p>
@@ -53,6 +59,11 @@ function TenderRow({ tender, options, codes }: { tender: Tender; options: Option
           <SafeLink url={tender.documentsUrl} safe={tender.documentsUrlSafe}>
             Documents
           </SafeLink>
+          {emailCount > 0 && (
+            <a href={`#/tenders/${encodeURIComponent(tender.tenderId)}`} className="text-ink-2 underline decoration-line underline-offset-4 hover:text-ink">
+              {plural(emailCount, 'email', 'emails')}
+            </a>
+          )}
           <RowAction
             onClick={() =>
               edit.open({
@@ -74,7 +85,17 @@ function TenderRow({ tender, options, codes }: { tender: Tender; options: Option
 
 const PAGE_SIZE = 4;
 
-export function TendersPanel({ tenders, options, projectCodes = [] }: { tenders: Tender[]; options?: Options | null; projectCodes?: string[] }) {
+export function TendersPanel({
+  tenders,
+  options,
+  projectCodes = [],
+  emails,
+}: {
+  tenders: Tender[];
+  options?: Options | null;
+  projectCodes?: string[];
+  emails?: Record<string, ProjectEmail[]> | null;
+}) {
   const edit = useEdit();
   const o = opts(options);
   const { upcoming, other } = splitTenders(tenders);
@@ -118,7 +139,7 @@ export function TendersPanel({ tenders, options, projectCodes = [] }: { tenders:
             {list.length ? (
               <ul className="divide-y divide-line">
                 {pager.visible.map((t) => (
-                  <TenderRow key={t.tenderId || t.title} tender={t} options={o} codes={projectCodes} />
+                  <TenderRow key={t.tenderId || t.title} tender={t} options={o} codes={projectCodes} emailCount={emails?.[t.tenderId]?.length ?? 0} />
                 ))}
               </ul>
             ) : (

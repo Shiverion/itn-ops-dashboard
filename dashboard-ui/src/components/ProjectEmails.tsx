@@ -5,14 +5,14 @@ import { EmptyState, Panel, Pill, SafeLink } from './ui';
 
 const SHOWN = 5;
 
-/** The email threads about one project, matched and summarised by the daily knowledge update. */
-export function ProjectEmails({ emails }: { emails: ProjectEmail[] }) {
+/** The email threads about one project or tender, matched and summarised by the daily knowledge update. */
+export function ProjectEmails({ emails, kind = 'projects' }: { emails: ProjectEmail[]; kind?: 'projects' | 'tenders' }) {
   const [all, setAll] = useState(false);
   const list = all ? emails : emails.slice(0, SHOWN);
   return (
     <Panel title="Email" count={emails.length}>
       {!emails.length ? (
-        <EmptyState title="No emails matched yet" hint="Each morning's update matches info@ mail to projects by name, client and aliases." />
+        <EmptyState title="No emails matched yet" hint={kind === 'tenders' ? 'Each morning’s update matches info@ mail to tenders by reference, RFQ number, items and buyer.' : 'Each morning’s update matches info@ mail to projects by name, client and aliases.'} />
       ) : (
         <div className="py-1">
           <ul className="divide-y divide-line">

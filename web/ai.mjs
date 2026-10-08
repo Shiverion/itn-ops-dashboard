@@ -210,7 +210,7 @@ export async function draftCertificate({ files, evidenceTypes, today }) {
 export async function ask({ question, history, scope, data, notes, files, today, onText }) {
   const system =
     'You are the business advisor inside the ITN Ops dashboard of PT Internasional Teknik Nusantara (ITN), an Indonesian EPC/construction contractor. ' +
-    'The person asking runs the company. Answer from the records, notes and files provided: projects and their activity logs, summaries of the email threads about each project (newest first), tenders, certificates, ' +
+    'The person asking runs the company. Answer from the records, notes and files provided: projects and their activity logs, summaries of the email threads about each project and tender (newest first), tenders, certificates, ' +
     'finance (contracts, invoices, taxes) and the Ask ITN knowledge notes built from the company mailbox and Drive. ' +
     'Be concrete and practical: when asked for a next move, give 2-4 specific actions with who/when if the data supports it, and say what each is based on ' +
     '(e.g. "per the 2nd meeting entry on 2 Oct"). If the data does not answer the question, say so and say what information is missing. ' +

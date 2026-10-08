@@ -14,6 +14,7 @@ import { ProjectsPanel } from './components/ProjectsPanel';
 import { RevenueKpis, RevenuePanel } from './components/RevenuePanel';
 import { SignIn } from './components/SignIn';
 import { TaxAlert, TaxesPanel, urgentTaxes } from './components/TaxesPanel';
+import { TenderPage } from './components/TenderPage';
 import { TendersPanel } from './components/TendersPanel';
 import { Skeleton } from './components/ui';
 import type { DashboardData } from './types';
@@ -40,7 +41,7 @@ const VIEWS: { key: View; label: string; finance?: boolean; editOnly?: boolean }
 
 interface Route {
   view: View;
-  /** A project code for #/projects/P-2026-001. */
+  /** A project code (#/projects/P-2026-001) or tender ID (#/tenders/T-2026-011). */
   item: string | null;
 }
 
@@ -138,7 +139,8 @@ function Page({ route, data, onSaved }: { route: Route; data: DashboardData; onS
       if (route.item) return <ProjectPage data={data} code={route.item} onSaved={onSaved} />;
       return <ProjectsPanel projects={data.projects} staleDays={data.staleUpdateDays} opsSheet={data.opsSheet} options={data.options} />;
     case 'tenders':
-      return <TendersPanel tenders={data.tenders} options={data.options} projectCodes={codes} />;
+      if (route.item) return <TenderPage data={data} id={route.item} />;
+      return <TendersPanel tenders={data.tenders} options={data.options} projectCodes={codes} emails={data.tenderEmails} />;
     case 'certificates':
       return <CertificatesPanel evidence={data.evidence} options={data.options} />;
     case 'taxes':
@@ -159,11 +161,11 @@ function Page({ route, data, onSaved }: { route: Route; data: DashboardData; onS
           {data.revenue ? (
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
               <RevenuePanel data={data} />
-              <TendersPanel tenders={data.tenders} options={data.options} projectCodes={codes} />
+              <TendersPanel tenders={data.tenders} options={data.options} projectCodes={codes} emails={data.tenderEmails} />
             </div>
           ) : (
             <div className="grid items-start gap-6 lg:grid-cols-2">
-              <TendersPanel tenders={data.tenders} options={data.options} projectCodes={codes} />
+              <TendersPanel tenders={data.tenders} options={data.options} projectCodes={codes} emails={data.tenderEmails} />
               <CertificatesPanel evidence={data.evidence} options={data.options} />
             </div>
           )}

@@ -18,9 +18,10 @@
 //   service account itself, which is a member of that shared drive only.
 // - The AI (ai.mjs) drafts log entries/certificates from uploaded files and
 //   answers questions, from data the viewer can already see.
-// - Email per project: the knowledge job matches mailbox threads to projects and
-//   stores a short summary of each (state/project-email.json, no email text);
-//   the dashboard shows them on the project pages and gives them to the advisor.
+// - Email per project/tender: the knowledge job matches mailbox threads to projects
+//   and tenders and stores a short summary of each (state/project-email.json, no
+//   email text); the dashboard shows them on the project and tender pages and
+//   gives them to the advisor.
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -250,7 +251,8 @@ async function dashboardData(viewer) {
     console.error('project emails', e.message);
     return null;
   });
-  payload.projectEmails = emailsByProject(emails, payload.projects.map((p) => p.projectCode));
+  payload.projectEmails = emailsFor(emails, 'projects', payload.projects.map((p) => p.projectCode));
+  payload.tenderEmails = emailsFor(emails, 'tenders', payload.tenders.map((t) => t.tenderId));
   return payload;
 }
 
@@ -271,9 +273,9 @@ async function loadProjectEmails() {
 
 const GMAIL_LINK = /^https:\/\/mail\.google\.com\/mail\/u\/0\/#all\/[0-9a-f]+$/;
 
-/** { projectCode: threads newest first } for the given projects; only the fields the page shows. */
-export function emailsByProject(store, codes) {
-  const out = Object.fromEntries(codes.map((c) => [c, []]));
+/** { id: threads newest first } for the given project codes or tender IDs (field 'projects' or 'tenders'); only the fields the pages show. */
+export function emailsFor(store, field, ids) {
+  const out = Object.fromEntries(ids.filter(Boolean).map((c) => [c, []]));
   for (const t of Object.values(store?.threads || {})) {
     const thread = {
       id: String(t.id || ''),
@@ -287,7 +289,7 @@ export function emailsByProject(store, codes) {
       kind: String(t.kind || 'Other'),
       documents: (Array.isArray(t.documents) ? t.documents : []).map(String),
     };
-    for (const code of t.projects || []) if (out[code]) out[code].push(thread);
+    for (const id of Array.isArray(t[field]) ? t[field] : []) if (out[id]) out[id].push(thread);
   }
   for (const list of Object.values(out)) list.sort((a, b) => b.last.localeCompare(a.last));
   return out;
@@ -544,6 +546,8 @@ function askData(data, code) {
     return {
       project: compactProject(p, 60),
       emails: (data.projectEmails?.[code] || []).slice(0, 25).map(compactEmail),
+      linkedTenderEmails: data.tenders.filter((t) => t.linkedProjectCode === code)
+        .flatMap((t) => (data.tenderEmails?.[t.tenderId] || []).slice(0, 10).map((e) => ({ tender: t.tenderId, ...compactEmail(e) }))),
       linkedTenders: data.tenders.filter((t) => t.linkedProjectCode === code).map(compactTender),
       otherProjects: data.projects.filter((x) => x !== p).map((x) => ({ code: x.projectCode, name: x.name, status: x.status })),
       ...(finance && {
@@ -554,10 +558,11 @@ function askData(data, code) {
     };
   }
   const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
-  const recentEmails = Object.entries(data.projectEmails || {})
-    .flatMap(([project, list]) => list.filter((e) => e.last >= cutoff).map((e) => ({ project, ...compactEmail(e) })))
+  const recent = (byId, label) =>
+    Object.entries(byId || {}).flatMap(([id, list]) => list.filter((e) => e.last >= cutoff).map((e) => ({ [label]: id, ...compactEmail(e) })));
+  const recentEmails = [...recent(data.projectEmails, 'project'), ...recent(data.tenderEmails, 'tender')]
     .sort((a, b) => b.last.localeCompare(a.last))
-    .slice(0, 30);
+    .slice(0, 40);
   return {
     projects: data.projects.map((p) => compactProject(p, 10)),
     recentEmails,

@@ -114,6 +114,8 @@ export interface DashboardData {
   options?: Options | null;
   /** Email threads per project code, newest first (from the knowledge job; absent until it has run). */
   projectEmails?: Record<string, ProjectEmail[]> | null;
+  /** Email threads per tender ID, newest first (same source). */
+  tenderEmails?: Record<string, ProjectEmail[]> | null;
 }
 
 export interface ProjectEmail {

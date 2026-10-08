@@ -6,7 +6,7 @@
 import Config from '../../../dashboard/src/Config.js';
 import Logic from '../../../shared/Logic.js';
 import type { DashboardData } from '../types';
-import { demoProjectEmails } from './emails';
+import { demoProjectEmails, demoTenderEmails } from './emails';
 import { seedSheets, type Cell, type Sheets } from './seed';
 
 const KEY = 'itn-demo-data-v1';
@@ -96,6 +96,7 @@ export function demoPayload(viewerEmail: string): DashboardData {
     financeSheet: null,
   }) as DashboardData;
   payload.projectEmails = demoProjectEmails(payload.projects.map((p) => p.projectCode));
+  payload.tenderEmails = demoTenderEmails(payload.tenders.map((t) => t.tenderId));
   return payload;
 }
 

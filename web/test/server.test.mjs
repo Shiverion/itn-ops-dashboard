@@ -14,7 +14,7 @@ Object.assign(process.env, {
   ITN_DELEGATING_SERVICE_ACCOUNT: 'sa@example.iam.gserviceaccount.com',
   ITN_REFRESH_URL: 'http://127.0.0.1:9',
 });
-const { server, viewerFrom, emailsByProject } = await import('../server.mjs');
+const { server, viewerFrom, emailsFor } = await import('../server.mjs');
 
 const fakeVerify = (claims) => async () => ({ getPayload: () => claims });
 const req = (authorization) => ({ headers: authorization ? { authorization } : {} });
@@ -64,18 +64,19 @@ test('server: page has a hash-pinned CSP; API needs sign-in; unknown paths 404',
   assert.equal((await fetch(base + '/../shared/Logic.js')).status, 404);
 });
 
-test('emailsByProject: groups threads per project, newest first, safe links only', () => {
+test('emailsFor: groups threads per project or tender, newest first, safe links only', () => {
   const store = {
     threads: {
-      a: { id: 'a', link: 'https://mail.google.com/mail/u/0/#all/19a', subject: 'RFQ', first: '2026-09-01', last: '2026-09-02', messages: 2, projects: ['P-1', 'P-2'], summary: 's', counterparty: 'PT A', kind: 'RFQ', documents: ['Q.pdf'] },
+      a: { id: 'a', link: 'https://mail.google.com/mail/u/0/#all/19a', subject: 'RFQ', first: '2026-09-01', last: '2026-09-02', messages: 2, projects: ['P-1', 'P-2'], tenders: ['T-1'], summary: 's', counterparty: 'PT A', kind: 'RFQ', documents: ['Q.pdf'] },
       b: { id: 'b', link: 'javascript:alert(1)', subject: 'PO', first: '2026-09-05', last: '2026-09-06', messages: 1, projects: ['P-1', 'P-GONE'], summary: 't', kind: 'PO / Contract' },
     },
   };
-  const out = emailsByProject(store, ['P-1', 'P-2', 'P-3']);
+  const out = emailsFor(store, 'projects', ['P-1', 'P-2', 'P-3']);
   assert.deepEqual(out['P-1'].map((t) => t.id), ['b', 'a']);
   assert.equal(out['P-1'][0].link, null);
   assert.equal(out['P-2'][0].link, 'https://mail.google.com/mail/u/0/#all/19a');
   assert.deepEqual(out['P-3'], []);
   assert.equal(out['P-GONE'], undefined);
-  assert.deepEqual(emailsByProject(null, ['P-1']), { 'P-1': [] });
+  assert.deepEqual(emailsFor(null, 'projects', ['P-1']), { 'P-1': [] });
+  assert.deepEqual(emailsFor(store, 'tenders', ['T-1', 'T-2', '']), { 'T-1': [out['P-2'][0]], 'T-2': [] });
 });

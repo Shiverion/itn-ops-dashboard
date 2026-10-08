@@ -1,6 +1,6 @@
-// Fictional email threads for the demo's project pages, dated relative to
+// Fictional email threads for the demo's project and tender pages, dated relative to
 // today. In the real dashboard these come from the daily knowledge job, which
-// matches the shared mailbox's threads to projects and keeps only a short
+// matches the shared mailbox's threads to projects and tenders and keeps only a short
 // summary of each. There is no mailbox here, so the threads have no Gmail link.
 import type { ProjectEmail } from '../types';
 
@@ -36,13 +36,29 @@ const SEED: Record<string, Seed[]> = {
   ],
 };
 
-export function demoProjectEmails(codes: string[]): Record<string, ProjectEmail[]> {
+const TENDER_SEED: Record<string, Seed[]> = {
+  'T-2026-021': [
+    ['t211', -4, -3, 3, 'Technical', 'RFQ-2026-118 – clarification on foundation scope', 'PT Ilustrasi Energi', 'ITN asked whether the compressor foundations are in scope; the buyer confirmed they are excluded and kept the Q&A deadline. ITN is still looking for a crane partner.'],
+    ['t212', -15, -15, 1, 'RFQ', 'Invitation – EPC compressor package relocation (RFQ-2026-118)', 'PT Ilustrasi Energi', 'The buyer invited ITN to quote the relocation of a compressor package and sent the RFQ documents and schedule.', ['RFQ-2026-118.pdf', 'Scope of Work.pdf']],
+  ],
+  'T-2026-022': [
+    ['t221', -8, -7, 2, 'Quotation', 'ITB-2026-044 – bid submission', 'PT Sampel Migas', 'ITN submitted its technical and commercial bid for the cathodic protection survey; the buyer confirmed receipt and will announce the evaluation result after the deadline.', ['Technical proposal.pdf', 'Commercial proposal.pdf']],
+  ],
+  'T-2026-019': [
+    ['t191', -17, -14, 4, 'PO / Contract', 'Award – Jetty Fender Replacement Phase 2', 'PT Sampel Pelabuhan Indonesia', 'The port authority awarded phase 2 to ITN and sent the purchase order; ITN signed and returned it, and the work became project P-2026-001.', ['PO RFQ-PH2-07.pdf']],
+  ],
+};
+
+function build(seed: Record<string, Seed[]>, ids: string[]): Record<string, ProjectEmail[]> {
   return Object.fromEntries(
-    codes.map((code) => [
+    ids.map((code) => [
       code,
-      (SEED[code] ?? []).map(([id, first, last, messages, kind, subject, counterparty, summary, documents = []]) => ({
+      (seed[code] ?? []).map(([id, first, last, messages, kind, subject, counterparty, summary, documents = []]) => ({
         id, link: null, subject, first: at(first, 2), last: at(last, 7), messages, summary, counterparty, kind, documents,
       })),
     ]),
   );
 }
+
+export const demoProjectEmails = (codes: string[]) => build(SEED, codes);
+export const demoTenderEmails = (ids: string[]) => build(TENDER_SEED, ids);

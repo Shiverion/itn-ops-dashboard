@@ -73,6 +73,7 @@ function context(data: DashboardData, projectCode?: string): unknown {
     return {
       project: p ? project(p, 40) : null,
       emails: (data.projectEmails?.[projectCode] ?? []).map(email),
+      linkedTenderEmails: data.tenders.filter((t) => t.linkedProjectCode === projectCode).flatMap((t) => (data.tenderEmails?.[t.tenderId] ?? []).map((e) => ({ tender: t.tenderId, ...email(e) }))),
       linkedTenders: data.tenders.filter((t) => t.linkedProjectCode === projectCode).map(tender),
       finance: (data.finance ?? []).filter((f) => f.projectCode === projectCode),
       invoices: strip((data.invoices ?? []).filter((i) => i.projectCode === projectCode)),
@@ -81,6 +82,7 @@ function context(data: DashboardData, projectCode?: string): unknown {
   return {
     projects: data.projects.map((p) => project(p, 6)),
     recentEmails: Object.entries(data.projectEmails ?? {}).flatMap(([code, list]) => list.slice(0, 2).map((e) => ({ project: code, ...email(e) }))),
+    recentTenderEmails: Object.entries(data.tenderEmails ?? {}).flatMap(([id, list]) => list.slice(0, 2).map((e) => ({ tender: id, ...email(e) }))),
     tenders: data.tenders.map(tender),
     certificates: data.evidence.map(({ raw, key, documentUrl, documentUrlSafe, ...c }) => c),
     revenue: data.revenue,
