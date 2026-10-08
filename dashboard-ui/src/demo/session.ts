@@ -4,7 +4,7 @@
 // Kimi API. Uploads are simulated and file drafts are examples, so no real
 // document is ever sent to an AI from the demo.
 import type { ChatMessage } from '../api';
-import type { DashboardData } from '../types';
+import type { DashboardData, ProjectEmail } from '../types';
 
 const SESSION_KEY = 'itn-demo-session';
 
@@ -65,12 +65,14 @@ function context(data: DashboardData, projectCode?: string): unknown {
     code: p.projectCode, name: p.name, client: p.client, location: p.location, status: p.status, progressPct: p.physicalProgressPct,
     nextMilestone: p.nextMilestone, nextMilestoneDate: p.nextMilestoneDate, daysSinceUpdate: p.lastUpdateAgeDays, log: logOf(p, n),
   });
+  const email = (e: ProjectEmail) => ({ last: e.last.slice(0, 10), subject: e.subject, with: e.counterparty, kind: e.kind, summary: e.summary, documents: e.documents });
   const tender = (t: DashboardData['tenders'][number]) => ({ id: t.tenderId, title: t.title, buyer: t.buyer, status: t.status, next: t.nextStage, linkedProject: t.linkedProjectCode });
   const strip = <T extends { raw?: unknown }>(list: T[] | null | undefined) => (list ?? []).map(({ raw, ...rest }) => rest);
   if (projectCode) {
     const p = data.projects.find((x) => x.projectCode === projectCode);
     return {
       project: p ? project(p, 40) : null,
+      emails: (data.projectEmails?.[projectCode] ?? []).map(email),
       linkedTenders: data.tenders.filter((t) => t.linkedProjectCode === projectCode).map(tender),
       finance: (data.finance ?? []).filter((f) => f.projectCode === projectCode),
       invoices: strip((data.invoices ?? []).filter((i) => i.projectCode === projectCode)),
@@ -78,6 +80,7 @@ function context(data: DashboardData, projectCode?: string): unknown {
   }
   return {
     projects: data.projects.map((p) => project(p, 6)),
+    recentEmails: Object.entries(data.projectEmails ?? {}).flatMap(([code, list]) => list.slice(0, 2).map((e) => ({ project: code, ...email(e) }))),
     tenders: data.tenders.map(tender),
     certificates: data.evidence.map(({ raw, key, documentUrl, documentUrlSafe, ...c }) => c),
     revenue: data.revenue,

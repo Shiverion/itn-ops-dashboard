@@ -18,6 +18,9 @@
 //   service account itself, which is a member of that shared drive only.
 // - The AI (ai.mjs) drafts log entries/certificates from uploaded files and
 //   answers questions, from data the viewer can already see.
+// - Email per project: the knowledge job matches mailbox threads to projects and
+//   stores a short summary of each (state/project-email.json, no email text);
+//   the dashboard shows them on the project pages and gives them to the advisor.
 
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -231,7 +234,7 @@ async function dashboardData(viewer) {
     }
   }
   const now = new Date();
-  return Logic.buildDashboardPayload({
+  const payload = Logic.buildDashboardPayload({
     ops,
     finance,
     financeExtra,
@@ -243,6 +246,51 @@ async function dashboardData(viewer) {
     opsSheet: sheetLink(OPS_ID),
     financeSheet: sheetLink(FINANCE_ID),
   });
+  const emails = await loadProjectEmails().catch((e) => {
+    console.error('project emails', e.message);
+    return null;
+  });
+  payload.projectEmails = emailsByProject(emails, payload.projects.map((p) => p.projectCode));
+  return payload;
+}
+
+let emailCache = { at: 0, value: null };
+
+/** The knowledge job's email-per-project file (state/project-email.json), cached for 10 minutes. */
+async function loadProjectEmails() {
+  if (!STATE_BUCKET) return null;
+  if (emailCache.value && Date.now() - emailCache.at < 10 * 60 * 1000) return emailCache.value;
+  const token = await adc.getAccessToken();
+  const url = `https://storage.googleapis.com/storage/v1/b/${encodeURIComponent(STATE_BUCKET)}/o/${encodeURIComponent('state/project-email.json')}?alt=media`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (res.status === 404) return null; // not built yet
+  if (!res.ok) throw new Error(`project-email.json: ${res.status}`);
+  emailCache = { at: Date.now(), value: await res.json() };
+  return emailCache.value;
+}
+
+const GMAIL_LINK = /^https:\/\/mail\.google\.com\/mail\/u\/0\/#all\/[0-9a-f]+$/;
+
+/** { projectCode: threads newest first } for the given projects; only the fields the page shows. */
+export function emailsByProject(store, codes) {
+  const out = Object.fromEntries(codes.map((c) => [c, []]));
+  for (const t of Object.values(store?.threads || {})) {
+    const thread = {
+      id: String(t.id || ''),
+      link: GMAIL_LINK.test(t.link) ? t.link : null,
+      subject: String(t.subject || ''),
+      first: String(t.first || ''),
+      last: String(t.last || ''),
+      messages: Number(t.messages) || 0,
+      summary: String(t.summary || ''),
+      counterparty: String(t.counterparty || ''),
+      kind: String(t.kind || 'Other'),
+      documents: (Array.isArray(t.documents) ? t.documents : []).map(String),
+    };
+    for (const code of t.projects || []) if (out[code]) out[code].push(thread);
+  }
+  for (const list of Object.values(out)) list.sort((a, b) => b.last.localeCompare(a.last));
+  return out;
 }
 
 // --- edits ---------------------------------------------------------------------------
@@ -481,6 +529,7 @@ const compactProject = (p, logEntries) => ({
   daysSinceUpdate: p.lastUpdateAgeDays, notes: p.raw?.Notes, start: p.raw?.StartDate, plannedEnd: p.raw?.PlannedEndDate,
   log: compactLog(p.log, logEntries),
 });
+const compactEmail = (e) => ({ last: e.last.slice(0, 10), first: e.first.slice(0, 10), subject: e.subject, with: e.counterparty, kind: e.kind, summary: e.summary, messages: e.messages, documents: e.documents });
 const compactTender = (t) => ({ id: t.tenderId, title: t.title, buyer: t.buyer, status: t.status, next: t.nextStage, linkedProject: t.linkedProjectCode, screening: t.raw?.ScreeningSummary });
 const strip = (list) => (list || []).map(({ raw, ...rest }) => rest);
 // Contracts keep their Notes (the scope of work), which the AI needs to judge experience.
@@ -494,6 +543,7 @@ function askData(data, code) {
     if (!p) throw new HttpError(404, `Project ${code} was not found.`);
     return {
       project: compactProject(p, 60),
+      emails: (data.projectEmails?.[code] || []).slice(0, 25).map(compactEmail),
       linkedTenders: data.tenders.filter((t) => t.linkedProjectCode === code).map(compactTender),
       otherProjects: data.projects.filter((x) => x !== p).map((x) => ({ code: x.projectCode, name: x.name, status: x.status })),
       ...(finance && {
@@ -503,8 +553,14 @@ function askData(data, code) {
       }),
     };
   }
+  const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
+  const recentEmails = Object.entries(data.projectEmails || {})
+    .flatMap(([project, list]) => list.filter((e) => e.last >= cutoff).map((e) => ({ project, ...compactEmail(e) })))
+    .sort((a, b) => b.last.localeCompare(a.last))
+    .slice(0, 30);
   return {
     projects: data.projects.map((p) => compactProject(p, 10)),
+    recentEmails,
     tenders: data.tenders.map(compactTender),
     certificates: data.evidence.map(({ raw, key, documentUrl, documentUrlSafe, ...c }) => c),
     ...(finance && { revenue: data.revenue, finance: data.finance, invoices: strip(data.invoices), contracts: stripContracts(data.contracts), taxes: strip(data.taxes) }),

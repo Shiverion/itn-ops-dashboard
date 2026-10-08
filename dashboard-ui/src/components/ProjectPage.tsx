@@ -5,6 +5,7 @@ import { opts, projectFields, today } from '../forms';
 import { milestoneBadge, updateBadge } from '../summary';
 import type { DashboardData, LogEntry, Options, Project } from '../types';
 import { Advisor } from './Advisor';
+import { ProjectEmails } from './ProjectEmails';
 import { RowAction, fromRaw, useEdit } from './edit';
 import { EmptyState, Panel, Pill, SafeLink, StatusChip } from './ui';
 
@@ -308,8 +309,9 @@ export function ProjectPage({ data, code, onSaved }: { data: DashboardData; code
             <Timeline log={project.log} projectCode={project.projectCode} onSaved={onSaved} />
           </div>
         </Panel>
-        <div className="lg:sticky lg:top-4">
+        <div className="space-y-6">
           <Advisor projectCode={project.projectCode} title="Ask about this project" />
+          {data.projectEmails && <ProjectEmails emails={data.projectEmails[project.projectCode] ?? []} />}
         </div>
       </div>
     </>

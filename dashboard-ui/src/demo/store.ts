@@ -6,6 +6,7 @@
 import Config from '../../../dashboard/src/Config.js';
 import Logic from '../../../shared/Logic.js';
 import type { DashboardData } from '../types';
+import { demoProjectEmails } from './emails';
 import { seedSheets, type Cell, type Sheets } from './seed';
 
 const KEY = 'itn-demo-data-v1';
@@ -82,7 +83,7 @@ export function demoPayload(viewerEmail: string): DashboardData {
   const generatedAt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
     .format(now)
     .replace(' at ', ', ');
-  return Logic.buildDashboardPayload({
+  const payload = Logic.buildDashboardPayload({
     ops: { Projects: s.Projects, ProjectLog: s.ProjectLog, Tenders: s.Tenders, Evidence: s.Evidence, Config: s.Config },
     finance: financeWithFormulas(),
     financeExtra: { Invoices: s.Invoices, Contracts: s.Contracts, Taxes: s.Taxes },
@@ -94,6 +95,8 @@ export function demoPayload(viewerEmail: string): DashboardData {
     opsSheet: null,
     financeSheet: null,
   }) as DashboardData;
+  payload.projectEmails = demoProjectEmails(payload.projects.map((p) => p.projectCode));
+  return payload;
 }
 
 /** Writes planned cells into a sheet: dates (YYYY-MM-DD) become serial numbers, as the real sheet stores them. */

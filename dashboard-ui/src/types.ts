@@ -112,6 +112,22 @@ export interface DashboardData {
   contracts?: Contract[] | null;
   taxes?: TaxRow[] | null;
   options?: Options | null;
+  /** Email threads per project code, newest first (from the knowledge job; absent until it has run). */
+  projectEmails?: Record<string, ProjectEmail[]> | null;
+}
+
+export interface ProjectEmail {
+  id: string;
+  /** Gmail link to the thread in the shared mailbox, or null if it isn't a plain Gmail link. */
+  link: string | null;
+  subject: string;
+  first: string;
+  last: string;
+  messages: number;
+  summary: string;
+  counterparty: string;
+  kind: string;
+  documents: string[];
 }
 
 export interface Revenue {
