@@ -41,15 +41,51 @@ The eight portfolio captures below preserve the dashboard’s original screens a
 ## Architecture
 
 ```mermaid
-flowchart LR
-  phone[Phone / laptop] -->|ops.itnconstruction.com| cf[Cloudflare Worker]
-  cf --> run[Cloud Run: web/server.mjs<br/>serves the React app + API]
-  run -->|Google sign-in check<br/>on every request| gis[Google Identity]
-  run -->|read/write AS the viewer<br/>domain-wide delegation, Sheets only| sheets[(Google Sheets<br/>Operations + Finance)]
-  run -->|as itself, member of<br/>one shared drive only| drive[(Shared drive<br/>ITN Ops Files)]
-  run -->|no tools, files as content| ai[Claude Code<br/>Sonnet 5.5]
-  run -->|read-only| notes[(Knowledge notes<br/>Cloud Storage)]
-  run -->|forwards viewer's token| refresh[Refresh service<br/>→ knowledge job]
+flowchart TD
+  subgraph Client["Client"]
+    User["Phone or laptop"]
+  end
+
+  subgraph Edge["Edge"]
+    Worker["Cloudflare Worker"]
+  end
+
+  subgraph Server["Server"]
+    Run["Cloud Run<br/>web/server.mjs<br/>React app and API"]
+  end
+
+  subgraph Data["Google data"]
+    Sheets[("Google Sheets<br/>Operations and Finance")]
+    Drive[("Shared drive<br/>ITN Ops Files")]
+    Notes[("Knowledge notes<br/>Cloud Storage")]
+  end
+
+  subgraph External["External services"]
+    Identity(["Google Identity Services"])
+    Claude(["Claude Code<br/>Sonnet 5.5"])
+  end
+
+  subgraph Pipeline["Knowledge pipeline"]
+    Refresh(["Refresh service"])
+    Job(["Knowledge job"])
+  end
+
+  User -->|"ops.itnconstruction.com"| Worker
+  Worker --> Run
+  Run -->|"Google sign-in check<br/>every request"| Identity
+  Run -->|"Read/write as viewer<br/>domain-wide delegation<br/>Sheets only"| Sheets
+  Run -->|"Service account identity<br/>one shared drive only"| Drive
+  Run -->|"Files passed as content<br/>no tools"| Claude
+  Run -->|"Read only"| Notes
+  Run -->|"Forwards viewer token"| Refresh
+  Refresh --> Job
+
+  classDef store fill:#e8f1fb,stroke:#3b82c4,color:#0b2540
+  classDef ext fill:#f3effa,stroke:#7c5cbf,color:#24123f
+  classDef guard fill:#fdf1e6,stroke:#c77a2a,color:#3d2206
+  class Sheets,Drive,Notes store
+  class Claude,Refresh,Job ext
+  class Identity guard
 ```
 
 - **Google Sheets is the system of record.** The team already uses it, there is no database to run, and Google's file sharing stays the permission model.
@@ -84,15 +120,47 @@ The Architecture and Security sections above show the component diagram. This se
 
 ### Two Deployment Targets, One Rule Set
 
-```text
-                     shared/Logic.js  (payload builder, planEdit / planDelete, tax rules)
-                    ┌──────────────┴──────────────┐
- Production (Cloud Run)                       Stakeholder demo (Vercel)
- web/server.mjs                               dashboard-ui demo mode + api/
-  ├─ Google ID-token check on every call       ├─ api/login: signed 12-hour session token
-  ├─ Sheets read/write as the viewer           ├─ in-browser store, fictional seed data
-  ├─ Shared drive uploads (service account)    ├─ api/ask: Kimi, streamed NDJSON
-  └─ Claude Code (no tools), streamed NDJSON   └─ simulated uploads; no real documents sent
+```mermaid
+flowchart TD
+  subgraph Rules["Shared rule set"]
+    Logic["shared/Logic.js<br/>payload builder<br/>edit/delete planners and tax rules"]
+  end
+
+  subgraph Production["Production: Cloud Run"]
+    Server["web/server.mjs"]
+    Token["Google ID-token check<br/>on every call"]
+    ProdSheets[("Google Sheets<br/>read/write as viewer")]
+    ProdDrive[("Shared drive uploads<br/>service account")]
+    ProdAI(["Claude Code<br/>no tools<br/>streamed NDJSON"])
+
+    Server --> Token
+    Server --> ProdSheets
+    Server --> ProdDrive
+    Server --> ProdAI
+  end
+
+  subgraph Demo["Stakeholder demo: Vercel"]
+    DemoApp["dashboard-ui demo mode<br/>and api/"]
+    Login["api/login<br/>signed 12-hour session token"]
+    DemoStore[("In-browser store<br/>fictional seed data")]
+    DemoAI(["api/ask<br/>Kimi<br/>streamed NDJSON"])
+    Uploads["Simulated uploads<br/>no real documents sent"]
+
+    DemoApp --> Login
+    DemoApp --> DemoStore
+    DemoApp --> DemoAI
+    DemoApp --> Uploads
+  end
+
+  Logic --> Server
+  Logic --> DemoApp
+
+  classDef store fill:#e8f1fb,stroke:#3b82c4,color:#0b2540
+  classDef ext fill:#f3effa,stroke:#7c5cbf,color:#24123f
+  classDef guard fill:#fdf1e6,stroke:#c77a2a,color:#3d2206
+  class ProdSheets,ProdDrive,DemoStore store
+  class ProdAI,DemoAI ext
+  class Token,Login guard
 ```
 
 Both targets render the same single-file React build and run edits through the same validated planners. Demo behaviour therefore matches production rules without touching production data.
