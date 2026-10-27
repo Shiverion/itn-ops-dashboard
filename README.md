@@ -65,6 +65,66 @@ flowchart LR
 - **Audit:** every add, edit, deletion and upload is appended to an owner-only AuditLog tab; deletions keep the full row.
 - **Browser:** hash-pinned Content Security Policy (only the app's own script and Google sign-in), `frame-ancestors 'none'`, HSTS, `nosniff`.
 
+## System Design
+
+The Architecture and Security sections above show the component diagram. This section covers requirements, the two deployment targets, scaling limits, and trade-offs.
+
+### Requirements
+
+**Functional**
+- One mobile-friendly place for revenue, projects (with activity log and files), tenders, certificates, taxes, and contracts.
+- Add, edit, and delete every record type, with a full audit trail.
+- AI drafting from uploaded files and a streamed advisor grounded in company records.
+
+**Non-functional**
+- **Authorization equals Drive sharing**: no separate permission system to drift out of sync.
+- **Near-zero running cost**: serverless, no database.
+- **Safe AI**: uploaded documents can be read but can never trigger actions.
+- **Delivery**: built and deployed in two days, so the design favours existing Google infrastructure.
+
+### Two Deployment Targets, One Rule Set
+
+```text
+                     shared/Logic.js  (payload builder, planEdit / planDelete, tax rules)
+                    ┌──────────────┴──────────────┐
+ Production (Cloud Run)                       Stakeholder demo (Vercel)
+ web/server.mjs                               dashboard-ui demo mode + api/
+  ├─ Google ID-token check on every call       ├─ api/login: signed 12-hour session token
+  ├─ Sheets read/write as the viewer           ├─ in-browser store, fictional seed data
+  ├─ Shared drive uploads (service account)    ├─ api/ask: Kimi, streamed NDJSON
+  └─ Claude Code (no tools), streamed NDJSON   └─ simulated uploads; no real documents sent
+```
+
+Both targets render the same single-file React build and run edits through the same validated planners. Demo behaviour therefore matches production rules without touching production data.
+
+### Data and Write Path
+
+1. The client submits an edit → the server verifies the ID token and domain.
+2. `planEdit` whitelists fields per record type, validates them, detects duplicates, and computes the cell changes.
+3. Cells are written as the viewer. Text uses `RAW`, so it can never become a formula; only validated dates use `USER_ENTERED`.
+4. The change (or the full deleted row) is appended to the owner-only `AuditLog`.
+
+### Scale and Limits
+
+- The expected load is a handful of internal users. The Sheets API per-user quotas are the binding limit, well above that usage.
+- AI requests are the slowest path; responses stream so the UI stays responsive. The demo caps questions per session per hour and the answer length.
+- Cloud Run scales to zero when idle. The first request after idle pays a cold start.
+
+### Trade-offs
+
+| Decision | Benefit | Cost |
+| --- | --- | --- |
+| Sheets as the system of record | Familiar to staff, sharing = permissions, no database | No transactions or relational constraints |
+| Act as the signed-in viewer | Cannot over-expose data | Requires domain-wide delegation setup |
+| Single-file UI build | One artefact for Cloud Run, Apps Script, and Vercel | Larger initial page, no route-level code splitting |
+| AI with every tool disabled | Hostile documents are inert | AI cannot look things up on its own; context is assembled by the server |
+
+### What to Revisit as It Grows
+
+- Move high-write tables (invoices, taxes) to a transactional store if concurrent editing grows; keep Sheets for reporting.
+- Add a shared cache (Memorystore) if Cloud Run runs more than one instance.
+- Add per-route AI budgets and latency SLOs from the existing structured logs.
+
 ## Tech stack
 
 React 19 · TypeScript 5.9 · Tailwind CSS 4 · Vite 8 (single-file build) · Node.js 22 · `google-auth-library` · Google Sheets / Drive / IAM Credentials APIs · Google Cloud Run, Cloud Build, Secret Manager, Cloud Storage · Cloudflare Workers · Claude Code (Claude Sonnet 5.5) · `mammoth` (Word) · `exceljs` (Excel)
