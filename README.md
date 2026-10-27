@@ -103,7 +103,7 @@ flowchart TD
 
 ## System Design
 
-The Architecture and Security sections above show the component diagram. This section covers requirements, the two deployment targets, scaling limits, and trade-offs.
+The Architecture and Security sections above show the component diagram. This section covers requirements, the two deployment targets in this repository, scaling limits, and trade-offs. A third build of the same dashboard, the read-only Apps Script fallback, lives in the private repository and runs the same `shared/Logic.js`.
 
 ### Requirements
 
