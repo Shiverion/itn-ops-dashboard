@@ -1,6 +1,6 @@
 # ITN Ops Dashboard
 
-**The operations dashboard of PT Internasional Teknik Nusantara (ITN)**, an Indonesian EPC and construction contractor: revenue, projects, tenders, certificates, taxes and contracts in one place, editable from a phone, with an AI advisor that knows the company's history.
+**The mock of operations dashboard of PT Internasional Teknik Nusantara (ITN)**, an Indonesian EPC and construction contractor: revenue, projects, tenders, certificates, taxes and contracts in one place, editable from a phone, with an AI advisor that knows the company's history.
 
 Built and deployed in two days. Read the full story in **[CASE-STUDY.md](CASE-STUDY.md)** (written in the STAR format).
 
